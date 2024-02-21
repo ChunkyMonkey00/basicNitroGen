@@ -4,6 +4,7 @@ import random
 import string
 import time
 import signal
+import sys
 
 CONFIRM_URL = "https://discord.com/api/v8/entitlements/gift-codes/"
 working_codes = []
@@ -12,11 +13,14 @@ should_sleep = False  # Global flag to indicate if all threads should sleep
 num_threads =  20
 total_responses =  0
 
-def signal_handler(signal, frame):
+def end_program():
     global total_responses, start_time
     elapsed_time = time.time() - start_time
     print("Average CPS of session: "+str(total_responses/elapsed_time))
-    raise SystemExit(0)
+    raise sys.exit(0)
+
+def signal_handler(signal, frame):
+    end_program()
 
 signal.signal(signal.SIGINT, signal_handler)
 
@@ -31,7 +35,7 @@ def check_code(code):
         print(f"Code {code} is working")
         working_codes.append(code)
 
-        raise SystemExit(0)
+        end_program()
     elif response.status_code ==   429:
         if not should_sleep:
             should_sleep = True
@@ -64,7 +68,14 @@ checker_threads = []
 for _ in range(num_threads):
     checker_thread = threading.Thread(target=code_checker, args=(num_threads,))
     checker_threads.append(checker_thread)
+    checker_thread.daemon = True
     checker_thread.start()
+
+while True:  # making a loop
+    if input("\nPress enter to end... ") == "":  # if key 'q' is pressed 
+        print('\nExiting. 0 Codes found...')
+        end_program()
+        break  # finishing the loop
 
 # Start the CPS printing thread
 cps_thread = threading.Thread()
